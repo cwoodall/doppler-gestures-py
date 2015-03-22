@@ -1,6 +1,8 @@
 #!/usr/bin/env python
 
 from multiprocessing import Process, Queue, Event
+import multiprocessing
+import ctypes
 import pyaudio
 import wave
 import time
@@ -9,6 +11,7 @@ import struct
 import itertools
 import numpy as np
 import matplotlib.pyplot as plt
+import matplotlib.animation as animation
 from scipy import signal
 
 def block2short(block):
@@ -43,6 +46,7 @@ def tonePlayer(freq, sync):
     stream.start_stream()
     sync.set()
     h = 0
+    s = 0
     while 1:
         L = [A*np.sin(2*np.pi*float(i)*float(freq)/RATE) for i in range(h*CHUNK, h*CHUNK + CHUNK)]
         R = [A*np.sin(2*np.pi*float(i)*float(freq)/RATE) for i in range(h*CHUNK, h*CHUNK + CHUNK)]
@@ -50,19 +54,40 @@ def tonePlayer(freq, sync):
         chunk = b''.join(struct.pack('<h', i) for i in data)
         stream.write(chunk)
         h += 1
-
-#            data = wf.readframes(CHUNK)
-#        wf.rewind()
     print("done")
 
     stream.stop_stream()
     stream.close()
 
-#    wf.close()
     p.terminate()
     return True
 
-def recorder(q,freq, window_size, sync):
+def plotter(dump):
+    print "PLT"
+    f = 20000
+    mixer_sin = np.array([(np.sin(2*np.pi*(f-1000)*i/44100)) for i in range(1024*2)])
+
+    rfft_freqs = np.fft.rfftfreq(1024*2, d=1.0/44100)
+    def update(frame_number, axis):
+        res = mixer_sin * dump[0]
+        rfft = abs(np.fft.rfft(res))
+
+
+        axis.set_data(rfft_freqs,rfft)
+        return axis
+        
+    fig = plt.figure()
+    ax = plt.axes(xlim=[0,2000], ylim=[0,1024**2])
+    axis0 = ax.plot([],[])
+    anim = animation.FuncAnimation(fig,update,
+                                   fargs=(axis0),
+                                   interval=50)
+
+    plt.show()
+
+    return 0
+
+def recorder(dump,freq, window_size, sync):
     p = pyaudio.PyAudio()
 
     FORMAT = pyaudio.paInt16
@@ -83,9 +108,9 @@ def recorder(q,freq, window_size, sync):
     stream.start_stream()
     
     frames = []
-    plt.ion()
-    plt.show()
-    plt.draw()
+    #plt.ion()
+    #plt.show()
+    #plt.draw()
 
     sync.wait()
     
@@ -93,6 +118,7 @@ def recorder(q,freq, window_size, sync):
         data = stream.read(CHUNK)
         frame = block2short(data)
         frame = signal.convolve(frame, fir, 'same')
+        np.copyto(dump, frame)
         frame_fft = abs(np.fft.rfft(frame))
         freq_20khz_window = freqs[frange[0]:frange[1]]
         fft_20khz_window = frame_fft[frange[0]:frange[1]]
@@ -102,9 +128,9 @@ def recorder(q,freq, window_size, sync):
             thresh= fft_20khz_window[fft_maxarg]*.12
         else:
             thresh = 55000
-        plt.clf()
-        plt.plot(freqs[frange[0]:frange[1]], [thresh for i in range(len(fft_20khz_window))])
-        plt.plot(freqs[frange[0]:frange[1]], fft_20khz_window)
+        #plt.clf()
+        #plt.plot(freqs[frange[0]:frange[1]], [thresh for i in range(len(fft_20khz_window))])
+        #plt.plot(freqs[frange[0]:frange[1]], fft_20khz_window)
         bw_freqs = freq_20khz_window[np.where(fft_20khz_window>thresh)[0]]
         if bw_freqs.size > 2:
             bw = bw_freqs[-1] - bw_freqs[0]
@@ -113,9 +139,9 @@ def recorder(q,freq, window_size, sync):
 
             h = "".join([" " for i in range(int(80*(bw_usb + bw_lsb+ 200)/400))])
             print (h+"|")
-        plt.ylim([0,CHUNK**2 / 2])
+        #plt.ylim([0,CHUNK**2 / 2])
         
-        plt.draw()
+        #plt.draw()
 
 
     print "DONE"
@@ -129,23 +155,29 @@ if __name__ == "__main__":
     if len(sys.argv) < 2:
         print("Plays a wave file.\n\nUsage: %s freq freq_window" % sys.argv[0])
         sys.exit(-1)
-    for i in range(10):
-        q = Queue()
-        s = Event()
-        tonePlayer_p = Process(target=tonePlayer, args=(int(sys.argv[1]),s,))
-        tonePlayer_p.daemon = True
 
-        recorder_p = Process(target=recorder, args=(q,int(sys.argv[1]),int(sys.argv[2]),s,))
-        recorder_p.daemon = True
+    shared_array_base = multiprocessing.Array(ctypes.c_double, 1024*2)
+    shared_array = np.ctypeslib.as_array(shared_array_base.get_obj())
+    shared_array = shared_array.reshape(1, 1024*2)    
+    print shared_array
+    
+    s = Event()
+    tonePlayer_p = Process(target=tonePlayer, args=(int(sys.argv[1]),s,))
+    tonePlayer_p.daemon = True
+    
+    recorder_p = Process(target=recorder, args=(shared_array, int(sys.argv[1]),int(sys.argv[2]),s,))
+    recorder_p.daemon = True
 
-        recorder_p.start()
-        tonePlayer_p.start()
+    plotter_p = Process(target=plotter, args=(shared_array,))
+    plotter_p.daemon = True
 
+    
+    recorder_p.start()
+    tonePlayer_p.start()
+    plotter_p.start()
 
-        tonePlayer_p.join()
-        recorder_p.join()
-        time.sleep(1)
-
-#print rec
+    tonePlayer_p.join()
+    recorder_p.join()
+    
 
 
