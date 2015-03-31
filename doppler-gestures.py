@@ -9,6 +9,8 @@ import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.animation as animation
 from scipy import signal
+import sys
+from collections import deque
 
 def block2short(block):
     """
@@ -20,7 +22,7 @@ def block2short(block):
     # length of the block divided by 2.
     sample_len = len(block)/2
     fmt = "%dh" % (sample_len) # create the format string for unpacking
-    return struct.unpack(fmt, block)
+    return unpack(fmt, block)
 
 
 
@@ -50,7 +52,7 @@ def tonePlayer(freq, sync):
         L = [A*np.sin(2*np.pi*float(i)*float(freq)/RATE) for i in range(h*CHUNK, h*CHUNK + CHUNK)]
         R = [A*np.sin(2*np.pi*float(i)*float(freq)/RATE) for i in range(h*CHUNK, h*CHUNK + CHUNK)]
         data = chain(*zip(L,R))
-        chunk = b''.join(struct.pack('<h', i) for i in data)
+        chunk = b''.join(pack('<h', i) for i in data)
         stream.write(chunk)
         h += 1
     print("done")
@@ -76,7 +78,7 @@ def plotter(dump):
     rfft_freqs = np.fft.rfftfreq(1024*2, d=1.0/44100)
         
     fig = plt.figure()
-    ax = plt.axes(xlim=[0,2000], ylim=[0,1024**2])
+    ax = plt.axes(xlim=[0,2000], ylim=[0,1024*10])
     axis0 = ax.plot([],[])
     anim = animation.FuncAnimation(fig,update,
                                    fargs=(axis0),
@@ -112,7 +114,7 @@ def recorder(dump,freq, window_size, sync):
     frames = []
 
     sync.wait()
-    
+    i_history1 = deque(maxlen=3)
     while True:
         data = stream.read(CHUNK)
         frame = block2short(data)
@@ -122,20 +124,36 @@ def recorder(dump,freq, window_size, sync):
         freq_20khz_window = freqs[frange[0]:frange[1]]
         fft_20khz_window = frame_fft[frange[0]:frange[1]]
         fft_maxarg = np.argmax(fft_20khz_window) 
+        fft_peak = fft_20khz_window[fft_maxarg]
+
         
-        if fft_20khz_window[fft_maxarg] > 50000:
-            thresh= fft_20khz_window[fft_maxarg]*.12
-        else:
-            thresh = 55000
+        for i, pwr in enumerate(reversed(fft_20khz_window[:fft_maxarg])):
+            if pwr < fft_peak*.1:
+                i_history1.append(i)
+                if len(i_history1) >= i_history1.maxlen:
+                    i_avg1 = sum(i_history1)/i_history1.maxlen
+                    print "%10s" % "".join(["-" for h in range(10 if i_avg1 >= 10 else int(i_avg1))]),
+                break
+        
+        for i, pwr in enumerate(fft_20khz_window[fft_maxarg:]):
+            if pwr < fft_peak*.1:
+                print "%-10s" % "".join(["-" for h in range(i)])
+                break
 
-        bw_freqs = freq_20khz_window[np.where(fft_20khz_window>thresh)[0]]
-        if bw_freqs.size > 2:
-            bw = bw_freqs[-1] - bw_freqs[0]
-            bw_lsb =  bw_freqs[0] - freq_20khz_window[fft_maxarg]
-            bw_usb =  bw_freqs[-1] - freq_20khz_window[fft_maxarg]
+#        print fft_peak
+#       if fft_20khz_window[fft_maxarg] > 50000:
+#          thresh= fft_20khz_window[fft_maxarg]*.12
+#        else:
+#            thresh = 55000
 
-            h = "".join([" " for i in range(int(80*(bw_usb + bw_lsb+ 200)/400))])
-            print (h+"|")
+        #bw_freqs = freq_20khz_window[np.where(fft_20khz_window>thresh)[0]]
+        #if bw_freqs.size > 2:
+        #    bw = bw_freqs[-1] - bw_freqs[0]
+        #    bw_lsb =  bw_freqs[0] - freq_20khz_window[fft_maxarg]
+        #    bw_usb =  bw_freqs[-1] - freq_20khz_window[fft_maxarg]
+
+          #  h = "".join([" " for i in range(int(80*(bw_usb + bw_lsb+ 200)/400))])
+           # print (h+"|")
 
     stream.stop_stream()
     stream.close()
