@@ -115,6 +115,8 @@ def recorder(dump,freq, window_size, sync):
 
     sync.wait()
     i_history1 = deque(maxlen=3)
+    i_history2 = deque(maxlen=3)
+    coeffs = np.array([.1, .2, .7])
     while True:
         data = stream.read(CHUNK)
         frame = block2short(data)
@@ -131,14 +133,18 @@ def recorder(dump,freq, window_size, sync):
             if pwr < fft_peak*.1:
                 i_history1.append(i)
                 if len(i_history1) >= i_history1.maxlen:
-                    i_avg1 = sum(i_history1)/i_history1.maxlen
+                    i_avg1 = sum(i_history1 * coeffs)
                     print "%10s" % "".join(["-" for h in range(10 if i_avg1 >= 10 else int(i_avg1))]),
                 break
         
         for i, pwr in enumerate(fft_20khz_window[fft_maxarg:]):
             if pwr < fft_peak*.1:
-                print "%-10s" % "".join(["-" for h in range(i)])
+                i_history2.append(i)
+                if len(i_history2) >= i_history2.maxlen:
+                    i_avg2 = sum(i_history2 * coeffs)
+                    print "%-10s" % "".join(["-" for h in range(10 if i_avg1 >= 10 else int(i_avg2))]),
                 break
+        print
 
 #        print fft_peak
 #       if fft_20khz_window[fft_maxarg] > 50000:
