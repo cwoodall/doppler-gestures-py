@@ -12,7 +12,7 @@ config = {
     'download_url': '',
     'author_email': 'chris@cwoodall.com',
     'version': '0.1',
-    'install_requires': ['nose', 'pyaudio', 'matplotlib'],
+    'install_requires': ['nose', 'pyaudio', 'matplotlib', 'numpy', 'scipy'],
     'packages': ['pydoppler'],
     'scripts': ['bin/doppler-gestures.py'],
     'name': 'pydoppler',
