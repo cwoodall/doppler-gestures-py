@@ -6,7 +6,7 @@
 
 Working example:
 
-./doppler-gestures.py 20000 40
+./doppler-gestures.py 20000 2000
 
 Your speakers should be on rather high (no headphones) and your input/mic should also be on and at a high input gain.
 
