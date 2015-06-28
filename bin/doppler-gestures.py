@@ -7,6 +7,7 @@ from collections import deque
 from itertools import chain
 from multiprocessing import Array, Event, Process, Queue
 from struct import pack, unpack
+import argparse
 
 import numpy as np
 import pyaudio
@@ -17,6 +18,7 @@ from scipy import signal
 CHANNELS = 1
 CHUNK = 2048
 RATE = 44100
+
 
 def block2short(block):
     """
@@ -29,6 +31,7 @@ def block2short(block):
     sample_len = len(block)/2
     fmt = "%dh" % (sample_len) # create the format string for unpacking
     return unpack(fmt, block)
+
 
 def tonePlayer(freq, sync):
     """
@@ -106,7 +109,7 @@ def recorder(dump,freq, window_size, sync):
         fft_maxarg = np.argmax(fft_20khz_window)
         fft_peak = fft_20khz_window[fft_maxarg]
 
-
+        # Lower Side Band
         for i, pwr in enumerate(reversed(fft_20khz_window[:fft_maxarg])):
             if pwr < fft_peak*.1:
                 i_history1.append(i)
@@ -115,6 +118,7 @@ def recorder(dump,freq, window_size, sync):
                     print "%10s" % "".join(["-" for h in range(10 if i_avg1 >= 10 else int(i_avg1))]),
                 break
 
+        # Upper Side Band
         for i, pwr in enumerate(fft_20khz_window[fft_maxarg:]):
             if pwr < fft_peak*.1:
                 i_history2.append(i)
@@ -131,9 +135,13 @@ def recorder(dump,freq, window_size, sync):
     return frames
 
 if __name__ == "__main__":
-    if len(sys.argv) < 2:
-        print("Plays a wave file.\n\nUsage: %s freq freq_window" % sys.argv[0])
-        sys.exit(-1)
+
+    parser = argparse.ArgumentParser(description='Plays a tone (20kHz default) and then looks for doppler shifts within a window range')
+    parser.add_argument('--tone', '-t', dest='tone', action='store', type=int,
+                        default=20000, help='Tone (Hz)')
+    parser.add_argument('--window', '-w', dest='window', action='store', type=int,
+                        default=500, help='Window range (Hz)')
+    args = parser.parse_args()
 
     if CHANNELS == 2:
         shared_array_base = Array(ctypes.c_double, 2*CHUNK)
@@ -147,10 +155,14 @@ if __name__ == "__main__":
 
     s = Event()
 
-    tonePlayer_p = Process(target=tonePlayer, args=(int(sys.argv[1]),s,))
+    tonePlayer_p = Process(target=tonePlayer, args=(args.tone,s,))
     tonePlayer_p.daemon = True
 
-    recorder_p = Process(target=recorder, args=(shared_array, int(sys.argv[1]),int(sys.argv[2]),s,))
+    recorder_p = Process(target=recorder, args=(
+        shared_array,
+        args.tone,
+        args.window,
+        s,))
     recorder_p.daemon = True
 
     plotter_p = Process(target=pydoppler.plotter, args=(shared_array,))
