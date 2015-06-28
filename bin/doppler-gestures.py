@@ -22,7 +22,7 @@ def block2short(block):
     # length of the block divided by 2.
     sample_len = len(block)/2
     fmt = "%dh" % (sample_len) # create the format string for unpacking
-    return unpack(fmt, block)
+    return np.array(unpack(fmt, block),dtype=float)
 
 def tonePlayer(freq, sync):
     """
@@ -47,7 +47,7 @@ def tonePlayer(freq, sync):
     h = 0
     s = 0
     while 1:
-        L = [A*np.sin(2*np.pi*float(i)*float(freq)/RATE) for i in range(h*CHUNK, h*CHUNK + CHUNK)]
+        L = [A*np.cos(2*np.pi*float(i)*float(freq)/RATE) for i in range(h*CHUNK, h*CHUNK + CHUNK)]
         R = [A*np.sin(2*np.pi*float(i)*float(freq)/RATE) for i in range(h*CHUNK, h*CHUNK + CHUNK)]
         data = chain(*zip(L,R))
         chunk = b''.join(pack('<h', i) for i in data)
@@ -68,7 +68,7 @@ def recorder(dump,freq, window_size, sync):
     p = pyaudio.PyAudio()
 
     FORMAT = pyaudio.paInt16
-    CHANNELS = 1
+    CHANNELS = 2
     RATE = 44100
     CHUNK= 1024*2
     freqs = np.fft.rfftfreq(CHUNK, d=1.0/RATE)
@@ -93,6 +93,7 @@ def recorder(dump,freq, window_size, sync):
     while True:
         data = stream.read(CHUNK)
         frame = block2short(data)
+        frame.dtype = complex
         frame = signal.convolve(frame, fir, 'same')
         np.copyto(dump, frame)
         frame_fft = abs(np.fft.rfft(frame))
@@ -130,8 +131,9 @@ if __name__ == "__main__":
         print("Plays a wave file.\n\nUsage: %s freq freq_window" % sys.argv[0])
         sys.exit(-1)
 
-    shared_array_base = Array(ctypes.c_double, 1024*2)
+    shared_array_base = Array(ctypes.c_double, 1024*2*2)
     shared_array = np.ctypeslib.as_array(shared_array_base.get_obj())
+    shared_array.dtype = complex
     shared_array = shared_array.reshape(1, 1024*2)
     print shared_array
 
