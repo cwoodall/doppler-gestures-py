@@ -1,16 +1,18 @@
 #!/usr/bin/env python
 
-from multiprocessing import Process, Queue, Event, Array
 import ctypes
-import pyaudio
-from struct import pack, unpack
-from itertools import chain
-import numpy as np
-from scipy import signal
+import logging
 import sys
 from collections import deque
-import logging
+from itertools import chain
+from multiprocessing import Array, Event, Process, Queue
+from struct import pack, unpack
+
+import numpy as np
+import pyaudio
+
 import pydoppler
+from scipy import signal
 
 CHANNELS = 1
 CHUNK = 2048
