@@ -4,7 +4,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.animation as animation
 
-def plotter(dump):
+def plotter(dump, f):
     """
         Plots the fourier transform of dump
     """
@@ -14,7 +14,6 @@ def plotter(dump):
         axis.set_data(rfft_freqs,rfft)
         return axis
 
-    f = 20000
     mixer_sin = np.array([(np.sin(2*np.pi*(f-1000)*i/44100)) for i in range(1024*2)])
     rfft_freqs = np.fft.rfftfreq(1024*2, d=1.0/44100)
 
