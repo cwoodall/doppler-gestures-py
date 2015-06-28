@@ -12,6 +12,10 @@ from collections import deque
 import logging
 import pydoppler
 
+CHANNELS = 1
+CHUNK = 2048
+RATE = 44100
+
 def block2short(block):
     """
         Take a binary block produced by pyaudio and turn it into an array of
@@ -31,14 +35,13 @@ def tonePlayer(freq, sync):
 
     p = pyaudio.PyAudio()
 
-    RATE  = 44100
-    CHUNK = 1024*4
     A = (2**16 - 2)/2
+    CHUNK2 = CHUNK*2
 
     stream = p.open(format=pyaudio.paInt16,
                     channels=2,
                     rate=RATE,
-                    frames_per_buffer=CHUNK,
+                    frames_per_buffer=CHUNK2,
                     output=True,
                     input=False)
 
@@ -47,8 +50,11 @@ def tonePlayer(freq, sync):
     h = 0
     s = 0
     while 1:
-        L = [A*np.sin(2*np.pi*float(i)*float(freq)/RATE) for i in range(h*CHUNK, h*CHUNK + CHUNK)]
-        R = [A*np.sin(2*np.pi*float(i)*float(freq)/RATE) for i in range(h*CHUNK, h*CHUNK + CHUNK)]
+        if CHANNELS == 2:
+            L = [A*np.cos(2*np.pi*float(i)*float(freq)/RATE) for i in range(h*CHUNK2, h*CHUNK2 + CHUNK2)]
+        else:
+            L = [A*np.sin(2*np.pi*float(i)*float(freq)/RATE) for i in range(h*CHUNK2, h*CHUNK2 + CHUNK2)]
+        R = [A*np.sin(2*np.pi*float(i)*float(freq)/RATE) for i in range(h*CHUNK2, h*CHUNK2 + CHUNK2)]
         data = chain(*zip(L,R))
         chunk = b''.join(pack('<h', i) for i in data)
         stream.write(chunk)
@@ -66,16 +72,11 @@ def recorder(dump,freq, window_size, sync):
     Records audio
     """
     p = pyaudio.PyAudio()
-
-    FORMAT = pyaudio.paInt16
-    CHANNELS = 1
-    RATE = 44100
-    CHUNK= 1024*2
     freqs = np.fft.rfftfreq(CHUNK, d=1.0/RATE)
     display_freqs = (freq- window_size/2,freq + window_size/2)
     freq_range = np.where((freqs > display_freqs[0]) & (freqs<display_freqs[1]))
     frange = (freq_range[0][0],freq_range[0][-1])
-    stream = p.open(format=FORMAT,
+    stream = p.open(format=pyaudio.paInt16,
                     channels=CHANNELS,
                     rate=RATE,
                     input=True,
@@ -92,7 +93,9 @@ def recorder(dump,freq, window_size, sync):
     coeffs = np.array([.1, .2, .7])
     while True:
         data = stream.read(CHUNK)
-        frame = block2short(data)
+        frame = np.array(block2short(data), dtype=float)
+        if CHANNELS == 2:
+            frame.dtype = complex
         frame = signal.convolve(frame, fir, 'same')
         np.copyto(dump, frame)
         frame_fft = abs(np.fft.rfft(frame))
@@ -130,9 +133,14 @@ if __name__ == "__main__":
         print("Plays a wave file.\n\nUsage: %s freq freq_window" % sys.argv[0])
         sys.exit(-1)
 
-    shared_array_base = Array(ctypes.c_double, 1024*2)
+    if CHANNELS == 2:
+        shared_array_base = Array(ctypes.c_double, 2*CHUNK)
+    else:
+        shared_array_base = Array(ctypes.c_double, CHUNK)
     shared_array = np.ctypeslib.as_array(shared_array_base.get_obj())
-    shared_array = shared_array.reshape(1, 1024*2)
+    if CHANNELS == 2:
+        shared_array.dtype = complex
+    shared_array = shared_array.reshape(1, CHUNK)
     print shared_array
 
     s = Event()

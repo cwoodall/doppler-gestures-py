@@ -7,7 +7,7 @@ def plotter(dump):
         Plots the fourier transform of dump
     """
     def update(frame_number, axis):
-        res = mixer_sin * dump[0]
+        res = mixer_sin * dump
         rfft = abs(np.fft.rfft(res))
         axis.set_data(rfft_freqs,rfft)
         return axis
