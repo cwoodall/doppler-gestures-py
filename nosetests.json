@@ -1,0 +1,1 @@
+{"metadata": {"command": "/usr/local/bin/nosetests-3.4 --with-json-extended", "cwd": "/home/cwoodall/workspace/personal/doppler-gestures-py", "time": 1435457912.0587153}, "modules": [{"nr_failed": 0, "nr_success": 1, "testcases": [{"result": "success", "name": "test_nose_working"}], "nr_error": 0, "name": "test"}]}

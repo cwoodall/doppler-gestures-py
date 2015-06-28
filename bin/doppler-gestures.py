@@ -6,31 +6,29 @@ import pyaudio
 from struct import pack, unpack
 from itertools import chain
 import numpy as np
-import matplotlib.pyplot as plt
-import matplotlib.animation as animation
 from scipy import signal
 import sys
 from collections import deque
+import logging
+import pydoppler
 
 def block2short(block):
     """
-    Take a binary block produced by pyaudio and turn it into an array of
-    shorts. Assumes the pyaudio.paInt16 datatype is being used.
+        Take a binary block produced by pyaudio and turn it into an array of
+        shorts. Assumes the pyaudio.paInt16 datatype is being used.
     """
-    # Each entry is 2 bytes long and block appears as a binary string (array 
+    # Each entry is 2 bytes long and block appears as a binary string (array
     # of 1 byte characters). So the length of our final binary string is the
     # length of the block divided by 2.
     sample_len = len(block)/2
     fmt = "%dh" % (sample_len) # create the format string for unpacking
     return unpack(fmt, block)
 
-
-
 def tonePlayer(freq, sync):
     """
-    Plays a tone at frequency freq.
+        Plays a tone at frequency freq.
     """
-    
+
     p = pyaudio.PyAudio()
 
     RATE  = 44100
@@ -63,31 +61,6 @@ def tonePlayer(freq, sync):
     p.terminate()
     return True
 
-def plotter(dump):
-    """
-    Plots the fourier transform of dump
-    """
-    def update(frame_number, axis):
-        res = mixer_sin * dump[0]
-        rfft = abs(np.fft.rfft(res))
-        axis.set_data(rfft_freqs,rfft)
-        return axis
-
-    f = 20000
-    mixer_sin = np.array([(np.sin(2*np.pi*(f-1000)*i/44100)) for i in range(1024*2)])
-    rfft_freqs = np.fft.rfftfreq(1024*2, d=1.0/44100)
-        
-    fig = plt.figure()
-    ax = plt.axes(xlim=[0,2000], ylim=[0,1024*10])
-    axis0 = ax.plot([],[])
-    anim = animation.FuncAnimation(fig,update,
-                                   fargs=(axis0),
-                                   interval=50)
-
-    plt.show()
-
-    return 0
-
 def recorder(dump,freq, window_size, sync):
     """
     Records audio
@@ -110,7 +83,7 @@ def recorder(dump,freq, window_size, sync):
 
     fir = signal.firwin(64, [freq - window_size/2, freq + window_size/2], pass_zero=False,nyq=44100/2)
     stream.start_stream()
-    
+
     frames = []
 
     sync.wait()
@@ -125,10 +98,10 @@ def recorder(dump,freq, window_size, sync):
         frame_fft = abs(np.fft.rfft(frame))
         freq_20khz_window = freqs[frange[0]:frange[1]]
         fft_20khz_window = frame_fft[frange[0]:frange[1]]
-        fft_maxarg = np.argmax(fft_20khz_window) 
+        fft_maxarg = np.argmax(fft_20khz_window)
         fft_peak = fft_20khz_window[fft_maxarg]
 
-        
+
         for i, pwr in enumerate(reversed(fft_20khz_window[:fft_maxarg])):
             if pwr < fft_peak*.1:
                 i_history1.append(i)
@@ -136,20 +109,20 @@ def recorder(dump,freq, window_size, sync):
                     i_avg1 = sum(i_history1 * coeffs)
                     print "%10s" % "".join(["-" for h in range(10 if i_avg1 >= 10 else int(i_avg1))]),
                 break
-        
+
         for i, pwr in enumerate(fft_20khz_window[fft_maxarg:]):
             if pwr < fft_peak*.1:
                 i_history2.append(i)
                 if len(i_history2) >= i_history2.maxlen:
                     i_avg2 = sum(i_history2 * coeffs)
-                    print "%-10s" % "".join(["-" for h in range(10 if i_avg1 >= 10 else int(i_avg2))]),
+                    print "%-10s" % "".join(["-" for h in range(10 if i_avg2 >= 10 else int(i_avg2))]),
                 break
         print
 
     stream.stop_stream()
     stream.close()
     p.terminate()
-    
+
     return frames
 
 if __name__ == "__main__":
@@ -159,21 +132,21 @@ if __name__ == "__main__":
 
     shared_array_base = Array(ctypes.c_double, 1024*2)
     shared_array = np.ctypeslib.as_array(shared_array_base.get_obj())
-    shared_array = shared_array.reshape(1, 1024*2)    
+    shared_array = shared_array.reshape(1, 1024*2)
     print shared_array
-    
+
     s = Event()
 
     tonePlayer_p = Process(target=tonePlayer, args=(int(sys.argv[1]),s,))
     tonePlayer_p.daemon = True
-    
+
     recorder_p = Process(target=recorder, args=(shared_array, int(sys.argv[1]),int(sys.argv[2]),s,))
     recorder_p.daemon = True
 
-    plotter_p = Process(target=plotter, args=(shared_array,))
+    plotter_p = Process(target=pydoppler.plotter, args=(shared_array,))
     plotter_p.daemon = True
 
-    
+
     recorder_p.start()
     tonePlayer_p.start()
     plotter_p.start()
