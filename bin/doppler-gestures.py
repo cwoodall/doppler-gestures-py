@@ -174,7 +174,9 @@ def main():
     sync_event = Event()
 
     # Initialize all processes and then start them
-    tonePlayer_p = Process(target=tonePlayer, args=(args.tone,sync_event,))
+    tonePlayer_p = Process(target=tonePlayer, args=(
+        args.tone,
+        sync_event,))
     tonePlayer_p.daemon = True
 
     recorder_p = Process(target=recorder, args=(
@@ -184,7 +186,11 @@ def main():
         sync_event,))
     recorder_p.daemon = True
 
-    plotter_p = Process(target=pydoppler.plotter, args=(shared_array,args.tone,))
+    plotter_p = Process(target=pydoppler.plotter, args=(
+        shared_array,
+        args.tone,
+        args.window,
+        RATE,))
     plotter_p.daemon = True
 
 
