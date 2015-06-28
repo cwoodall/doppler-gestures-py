@@ -6,14 +6,14 @@
 $ ./doppler-gestures.py <tone> <window>
 ```
 
-__tone__ is in Hz  
-__window__ is in hz
+__tone__ is in Hz
+__window__ is in Hz
 
 Working example:
 
 ```
-$ PYTHONPATH=.  
-$ ./doppler-gestures.py 20000 500
+$ export PYTHONPATH=.
+$ ./doppler-gestures.py --tone 20000 --window 500 --channels 2
 ```
 
 Your speakers should be on rather high (no headphones) and your input/mic should also be on and at a high input gain.

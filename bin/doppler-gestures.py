@@ -159,7 +159,6 @@ def main():
         print("Invalid number of channels. Please enter as 1 or 2")
         sys.exit(-1)
 
-    # Setup shared data
     if CHANNELS == 2:
         shared_array_base = Array(ctypes.c_double, 2*CHUNK)
     else:
@@ -185,7 +184,7 @@ def main():
         sync_event,))
     recorder_p.daemon = True
 
-    plotter_p = Process(target=pydoppler.plotter, args=(shared_array,))
+    plotter_p = Process(target=pydoppler.plotter, args=(shared_array,args.tone,))
     plotter_p.daemon = True
 
 
