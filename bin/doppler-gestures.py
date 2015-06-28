@@ -134,8 +134,12 @@ def recorder(dump,freq, window_size, sync):
 
     return frames
 
-if __name__ == "__main__":
+def main():
+    """
+    Doppler Gesture detector
+    """
 
+    # Read in command-line arguments and switches
     parser = argparse.ArgumentParser(description='Plays a tone (20kHz default) and then looks for doppler shifts within a window range')
     parser.add_argument('--tone', '-t', dest='tone', action='store', type=int,
                         default=20000, help='Tone (Hz)')
@@ -145,33 +149,40 @@ if __name__ == "__main__":
                         help='Number of channels (1 or 2)')
     args = parser.parse_args()
 
+    # Verify arguments
+
+    # Check that the args.channels argument has the correct number of channels.
     if args.channels in [1, 2]:
+        # Set global channel to argument
         CHANNELS = args.channels
     else:
         print("Invalid number of channels. Please enter as 1 or 2")
         sys.exit(-1)
 
+    # Setup shared data
     if CHANNELS == 2:
         shared_array_base = Array(ctypes.c_double, 2*CHUNK)
     else:
         shared_array_base = Array(ctypes.c_double, CHUNK)
 
     shared_array = np.ctypeslib.as_array(shared_array_base.get_obj())
+
     if CHANNELS == 2:
         shared_array.dtype = complex
+
     shared_array = shared_array.reshape(1, CHUNK)
-    print shared_array
 
-    s = Event()
+    sync_event = Event()
 
-    tonePlayer_p = Process(target=tonePlayer, args=(args.tone,s,))
+    # Initialize all processes and then start them
+    tonePlayer_p = Process(target=tonePlayer, args=(args.tone,sync_event,))
     tonePlayer_p.daemon = True
 
     recorder_p = Process(target=recorder, args=(
         shared_array,
         args.tone,
         args.window,
-        s,))
+        sync_event,))
     recorder_p.daemon = True
 
     plotter_p = Process(target=pydoppler.plotter, args=(shared_array,))
@@ -185,3 +196,6 @@ if __name__ == "__main__":
     tonePlayer_p.join()
     recorder_p.join()
     plotter_p.join()
+
+if __name__ == "__main__":
+    main()
