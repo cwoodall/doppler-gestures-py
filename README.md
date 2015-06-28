@@ -2,7 +2,11 @@
 
 # Usage
 
-./doppler-gestures.py <tone> <window>
+./doppler-gestures.py \<tone> \<window>
+
+Working example:
+
+./doppler-gestures.py 20000 40
 
 Your speakers should be on rather high (no headphones) and your input/mic should also be on and at a high input gain.
 
