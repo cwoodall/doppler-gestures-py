@@ -146,21 +146,6 @@ def recorder(dump,freq, window_size, sync):
                 break
         print
 
-#        print fft_peak
-#       if fft_20khz_window[fft_maxarg] > 50000:
-#          thresh= fft_20khz_window[fft_maxarg]*.12
-#        else:
-#            thresh = 55000
-
-        #bw_freqs = freq_20khz_window[np.where(fft_20khz_window>thresh)[0]]
-        #if bw_freqs.size > 2:
-        #    bw = bw_freqs[-1] - bw_freqs[0]
-        #    bw_lsb =  bw_freqs[0] - freq_20khz_window[fft_maxarg]
-        #    bw_usb =  bw_freqs[-1] - freq_20khz_window[fft_maxarg]
-
-          #  h = "".join([" " for i in range(int(80*(bw_usb + bw_lsb+ 200)/400))])
-           # print (h+"|")
-
     stream.stop_stream()
     stream.close()
     p.terminate()
