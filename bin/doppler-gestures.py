@@ -141,12 +141,21 @@ if __name__ == "__main__":
                         default=20000, help='Tone (Hz)')
     parser.add_argument('--window', '-w', dest='window', action='store', type=int,
                         default=500, help='Window range (Hz)')
+    parser.add_argument('--channels', '-c', action='store', type=int, default=2,
+                        help='Number of channels (1 or 2)')
     args = parser.parse_args()
+
+    if args.channels in [1, 2]:
+        CHANNELS = args.channels
+    else:
+        print("Invalid number of channels. Please enter as 1 or 2")
+        sys.exit(-1)
 
     if CHANNELS == 2:
         shared_array_base = Array(ctypes.c_double, 2*CHUNK)
     else:
         shared_array_base = Array(ctypes.c_double, CHUNK)
+
     shared_array = np.ctypeslib.as_array(shared_array_base.get_obj())
     if CHANNELS == 2:
         shared_array.dtype = complex
