@@ -22,3 +22,4 @@ Your speakers should be on rather high (no headphones) and your input/mic should
 
 - [Daniel Rapp's Doppler Javascript](https://danielrapp.github.io/doppler/)
 - [Gupta, et. al's SoundWave Paper from Microsoft Research](http://research.microsoft.com/en-us/um/redmond/groups/cue/publications/guptasoundwavechi2012.pdf)
+- [ryanvolz's python for Ambiguity Function](https://gist.github.com/ryanvolz/8b0d9f3e48ec8ddcef4d)

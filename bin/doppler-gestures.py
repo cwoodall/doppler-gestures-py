@@ -15,10 +15,14 @@ import pyaudio
 import pydoppler
 from scipy import signal
 
-CHANNELS = 1
+TONE = 20000
+WINDOW = 500
+CHANNELS = 2
 CHUNK = 2048
 RATE = 44100
 
+PLOTTER = True
+AMBIGUITY = False
 
 def block2short(block):
     """
@@ -138,24 +142,32 @@ def main():
     """
     Doppler Gesture detector
     """
+    global CHUNK
+    global RATE
+    global CHANNELS
 
     # Read in command-line arguments and switches
     parser = argparse.ArgumentParser(description='Plays a tone (20kHz default) and then looks for doppler shifts within a window range')
     parser.add_argument('--tone', '-t', dest='tone', action='store', type=int,
-                        default=20000, help='Tone (Hz)')
+                        default=TONE, help='Tone (Hz)')
     parser.add_argument('--window', '-w', dest='window', action='store', type=int,
-                        default=500, help='Window range (Hz)')
-    parser.add_argument('--channels', '-c', action='store', type=int, default=2,
-                        help='Number of channels (1 or 2)')
+                        default=WINDOW, help='Window range (Hz)')
+    parser.add_argument('--channels', '-c', dest='channels', action='store', type=int,
+                        default=CHANNELS, help='Number of channels (1 or 2)')
+    parser.add_argument('--size', '-s', dest='size', action='store', type=int,
+                        default=CHUNK, help='Sample size')
+    parser.add_argument('--rate', '-r', dest='rate', action='store', type=int,
+                        default=RATE, help='Sample rate (Hz)')
     args = parser.parse_args()
+
+    CHUNK = args.size
+    RATE = args.rate
+    CHANNELS = args.channels
 
     # Verify arguments
 
     # Check that the args.channels argument has the correct number of channels.
-    if args.channels in [1, 2]:
-        # Set global channel to argument
-        CHANNELS = args.channels
-    else:
+    if args.channels not in [1, 2]:
         print("Invalid number of channels. Please enter as 1 or 2")
         sys.exit(-1)
 
@@ -186,21 +198,35 @@ def main():
         sync_event,))
     recorder_p.daemon = True
 
-    plotter_p = Process(target=pydoppler.plotter, args=(
-        shared_array,
-        args.tone,
-        args.window,
-        RATE,))
-    plotter_p.daemon = True
+    if PLOTTER:
+        plotter_p = Process(target=pydoppler.plotter, args=(
+            shared_array,
+            args.tone,
+            args.window,
+            args.rate,))
+        plotter_p.daemon = True
 
+    if AMBIGUITY:
+        ambiguity_p = Process(target=pydoppler.plotamb, args=(
+            shared_array,
+            args.tone,
+            args.window,
+            args.rate,))
+        ambiguity_p.daemon = True
 
     recorder_p.start()
     tonePlayer_p.start()
-    plotter_p.start()
+    if PLOTTER:
+        plotter_p.start()
+    if AMBIGUITY:
+        ambiguity_p.start()
 
     tonePlayer_p.join()
     recorder_p.join()
-    plotter_p.join()
+    if PLOTTER:
+        plotter_p.join()
+    if AMBIGUITY:
+        ambiguity_p.join()
 
 if __name__ == "__main__":
     main()
