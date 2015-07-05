@@ -57,15 +57,13 @@ def tonePlayer(freq, sync):
     stream.start_stream()
     sync.set()
     s = 0
-    j = 0
     while 1:
-        r = range(j, j + CHUNK2)
+        r = range(0, CHUNK2)
         if CHANNELS == 2:
             L = [A*np.cos(2*np.pi*float(i)*float(freq)/RATE) for i in r]
         else:
             L = [A*np.sin(2*np.pi*float(i)*float(freq)/RATE) for i in r]
         R = [A*np.sin(2*np.pi*float(i)*float(freq)/RATE) for i in r]
-        j = (j+CHUNK2)%RATE
         data = chain(*zip(L,R))
         chunk = b''.join(pack('<h', i) for i in data)
         stream.write(chunk)
