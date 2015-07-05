@@ -44,8 +44,8 @@ def tonePlayer(freq, sync):
 
     p = pyaudio.PyAudio()
 
-    A = (2**16 - 2)/2
-    CHUNK2 = CHUNK*2
+    A = float(2**15 - 1)
+    CHUNK2 = ((CHUNK+RATE-1)/RATE)*RATE
 
     stream = p.open(format=pyaudio.paInt16,
                     channels=2,
@@ -56,18 +56,19 @@ def tonePlayer(freq, sync):
 
     stream.start_stream()
     sync.set()
-    h = 0
     s = 0
+    j = 0
     while 1:
+        r = range(j, j + CHUNK2)
         if CHANNELS == 2:
-            L = [A*np.cos(2*np.pi*float(i)*float(freq)/RATE) for i in range(h*CHUNK2, h*CHUNK2 + CHUNK2)]
+            L = [A*np.cos(2*np.pi*float(i)*float(freq)/RATE) for i in r]
         else:
-            L = [A*np.sin(2*np.pi*float(i)*float(freq)/RATE) for i in range(h*CHUNK2, h*CHUNK2 + CHUNK2)]
-        R = [A*np.sin(2*np.pi*float(i)*float(freq)/RATE) for i in range(h*CHUNK2, h*CHUNK2 + CHUNK2)]
+            L = [A*np.sin(2*np.pi*float(i)*float(freq)/RATE) for i in r]
+        R = [A*np.sin(2*np.pi*float(i)*float(freq)/RATE) for i in r]
+        j = (j+CHUNK2)%RATE
         data = chain(*zip(L,R))
         chunk = b''.join(pack('<h', i) for i in data)
         stream.write(chunk)
-        h += 1
     print("done")
 
     stream.stop_stream()
