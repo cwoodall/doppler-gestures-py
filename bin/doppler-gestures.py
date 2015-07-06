@@ -16,7 +16,7 @@ import pydoppler
 from scipy import signal
 
 TONE = 20000
-WINDOW = 500
+WINDOW = 1000
 CHANNELS = 2
 CHUNK = 2048
 RATE = 44100
@@ -43,29 +43,24 @@ def tonePlayer(freq, sync):
     """
 
     p = pyaudio.PyAudio()
-
-    A = float(2**15 - 1)
-    CHUNK2 = ((CHUNK+RATE-1)/RATE)*RATE
-
     stream = p.open(format=pyaudio.paInt16,
                     channels=2,
                     rate=RATE,
-                    frames_per_buffer=CHUNK2,
+                    frames_per_buffer=RATE,
                     output=True,
                     input=False)
 
     stream.start_stream()
     sync.set()
-    s = 0
-    j = 0
+
+    A = float(2**15 - 1)
     while 1:
-        r = range(j, j + CHUNK2)
+        r = range(0, RATE)
         if CHANNELS == 2:
             L = [A*np.cos(2*np.pi*float(i)*float(freq)/RATE) for i in r]
         else:
             L = [A*np.sin(2*np.pi*float(i)*float(freq)/RATE) for i in r]
         R = [A*np.sin(2*np.pi*float(i)*float(freq)/RATE) for i in r]
-        j = (j+CHUNK2)%RATE
         data = chain(*zip(L,R))
         chunk = b''.join(pack('<h', i) for i in data)
         stream.write(chunk)
@@ -202,6 +197,7 @@ def main():
     if PLOTTER:
         plotter_p = Process(target=pydoppler.plotter, args=(
             shared_array,
+            args.channels,
             args.tone,
             args.window,
             args.rate,))
@@ -210,6 +206,7 @@ def main():
     if AMBIGUITY:
         ambiguity_p = Process(target=pydoppler.plotamb, args=(
             shared_array,
+            args.channels,
             args.tone,
             args.window,
             args.rate,))

@@ -32,8 +32,8 @@ def ambiguity(code, nfreq=1):
     """
     inlen = len(code)
     outlen = 2*inlen - 1
-    if nfreq < inlen:
-        nfreq = inlen
+    #if nfreq < inlen:
+    #    nfreq = inlen
 
     # Doppler shift the code to form a correlation bank in the form of a matrix
     doppleridx = np.arange(nfreq)[:, np.newaxis]*np.arange(inlen)
@@ -55,18 +55,18 @@ def ambiguity(code, nfreq=1):
 
     return amb
 
-def plotamb(code, tone, window, rate):
+def plotamb(code, channels, tone, window, rate):
 
     def update(frame_number):
-        barker13 = np.asarray(code[0], np.complex)
-        #barker13 = np.ones(N, np.complex)
-        b13amb = ambiguity(barker13)
+        barker13 = np.asarray(code[0], np.complex)*mixer_sin
+        #barker13 = np.ones(L, np.complex)
+        b13amb = ambiguity(barker13, window)
         im.set_data(a*np.fft.fftshift(b13amb, axes=0).T)
         return im
 
     def init():
-        barker13 = np.ones(N, np.complex)
-        b13amb = ambiguity(barker13)
+        barker13 = np.ones(L, np.complex)
+        b13amb = ambiguity(barker13, window)
         im.set_data(a*np.fft.fftshift(b13amb, axes=0).T)
         return im
 
@@ -77,15 +77,17 @@ def plotamb(code, tone, window, rate):
     plt.ylabel('Delay Index')
 
     barker13 = np.asarray(code[0], np.complex)
-    b13amb = ambiguity(barker13)
+    b13amb = ambiguity(barker13, window)
     L = len(barker13)
-    N = len(barker13)
-    a = 1.1
-    mixer_sin = np.array([(np.sin(2*np.pi*(tone-window/2)*i/rate)) for i in range(N)])
+    a = 1.0
+    if channels == 2:
+        mixer_sin = np.array([(np.exp(2*np.pi*1j*(tone-window/2)*i/rate)) for i in range(L)])
+    else:
+        mixer_sin = np.array([(np.sin(2*np.pi*(tone-window/2)*i/rate)) for i in range(L)])
 
     im = plt.imshow(
         np.fft.fftshift(b13amb, axes=0).T,
-        extent=(-N/2, N/2, -L, L),
+        extent=(-window/2, window/2, -L, L),
         aspect='auto', interpolation='none', origin='lower')
 
     anim = animation.FuncAnimation(fig, update, interval=50,)
