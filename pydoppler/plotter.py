@@ -4,7 +4,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.animation as animation
 
-def plotter(dump, tone, window, rate):
+def plotter(dump, channels, tone, window, rate):
     """
         Plots the fourier transform of dump
     """
@@ -15,8 +15,12 @@ def plotter(dump, tone, window, rate):
         return axis
 
     length = dump.size
-    mixer_sin = np.array([(np.sin(2*np.pi*(tone-window/2)*i/rate)) for i in range(length)])
     rfft_freqs = np.fft.rfftfreq(length, d=1.0/rate)
+
+    if channels == 2:
+        mixer_sin = np.array([(np.exp(2*np.pi*1j*(tone-window/2)*i/rate)) for i in range(length)])
+    else:
+        mixer_sin = np.array([(np.sin(2*np.pi*(tone-window/2)*i/rate)) for i in range(length)])
 
     fig = plt.figure()
     ax = plt.axes(xlim=[0,window], ylim=[0,5*length])

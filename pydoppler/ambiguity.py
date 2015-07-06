@@ -55,10 +55,10 @@ def ambiguity(code, nfreq=1):
 
     return amb
 
-def plotamb(code, tone, window, rate):
+def plotamb(code, channels, tone, window, rate):
 
     def update(frame_number):
-        barker13 = np.asarray(code[0], np.complex)
+        barker13 = np.asarray(code[0], np.complex)*mixer_sin
         #barker13 = np.ones(N, np.complex)
         b13amb = ambiguity(barker13)
         im.set_data(a*np.fft.fftshift(b13amb, axes=0).T)
@@ -81,7 +81,11 @@ def plotamb(code, tone, window, rate):
     L = len(barker13)
     N = len(barker13)
     a = 1.1
-    mixer_sin = np.array([(np.sin(2*np.pi*(tone-window/2)*i/rate)) for i in range(N)])
+
+    if channels == 2:
+        mixer_sin = np.array([(np.exp(2*np.pi*1j*(tone-window/2)*i/rate)) for i in range(N)])
+    else:
+        mixer_sin = np.array([(np.sin(2*np.pi*(tone-window/2)*i/rate)) for i in range(N)])
 
     im = plt.imshow(
         np.fft.fftshift(b13amb, axes=0).T,

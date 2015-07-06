@@ -200,6 +200,7 @@ def main():
     if PLOTTER:
         plotter_p = Process(target=pydoppler.plotter, args=(
             shared_array,
+            args.channels,
             args.tone,
             args.window,
             args.rate,))
@@ -208,6 +209,7 @@ def main():
     if AMBIGUITY:
         ambiguity_p = Process(target=pydoppler.plotamb, args=(
             shared_array,
+            args.channels,
             args.tone,
             args.window,
             args.rate,))
