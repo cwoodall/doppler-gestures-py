@@ -59,9 +59,8 @@ def plotamb(code, channels, tone, window, rate):
 
     def update(frame_number):
         barker13 = np.asarray(code[0], np.complex)*mixer_sin
-        #barker13 = np.ones(L, np.complex)
         b13amb = ambiguity(barker13, window)
-        im.set_data(a*np.fft.fftshift(b13amb, axes=0).T)
+        im.set_data(np.fft.fftshift(b13amb, axes=0).T)
         return im
 
     def init():
@@ -71,23 +70,21 @@ def plotamb(code, channels, tone, window, rate):
         return im
 
     fig = plt.figure()
-    #ax = fig.add_subplot(111)
-    #ax.grid(True)
     plt.xlabel('Frequency Index')
     plt.ylabel('Delay Index')
 
     barker13 = np.asarray(code[0], np.complex)
-    b13amb = ambiguity(barker13, window)
     L = len(barker13)
-    a = 1.0
+    b13amb = np.empty((window, 2*L-1), np.float)
+    b13amb = ambiguity(barker13, window)
     if channels == 2:
-        mixer_sin = np.array([(np.exp(2*np.pi*1j*(tone-window/2)*i/rate)) for i in range(L)])
+        mixer_sin = np.array([(np.exp(2*np.pi*1j*tone*i/rate)) for i in range(L)])
     else:
-        mixer_sin = np.array([(np.sin(2*np.pi*(tone-window/2)*i/rate)) for i in range(L)])
+        mixer_sin = np.array([(np.sin(2*np.pi*1 *tone*i/rate)) for i in range(L)])
 
     im = plt.imshow(
         np.fft.fftshift(b13amb, axes=0).T,
-        extent=(-window/2, window/2, -L, L),
+        extent=(0-window/2, 0+window/2, -L, L),
         aspect='auto', interpolation='none', origin='lower')
 
     anim = animation.FuncAnimation(fig, update, interval=50,)
