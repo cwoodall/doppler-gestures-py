@@ -1,6 +1,13 @@
 # Python Doppler Gestures
 
-# Usage
+## Installing
+
+Ubuntu 14.04: portaudio19
+```
+$ sudo apt-get install portaudio19-dev
+$ sudo pip install .
+```
+## Usage
 
 ```
 $ ./doppler-gestures.py <tone> <window>
@@ -18,7 +25,7 @@ $ ./doppler-gestures.py --tone 20000 --window 500 --channels 2
 
 Your speakers should be on rather high (no headphones) and your input/mic should also be on and at a high input gain.
 
-# Resources
+## Resources
 
 - [Daniel Rapp's Doppler Javascript](https://danielrapp.github.io/doppler/)
 - [Gupta, et. al's SoundWave Paper from Microsoft Research](http://research.microsoft.com/en-us/um/redmond/groups/cue/publications/guptasoundwavechi2012.pdf)
